@@ -38,68 +38,79 @@
     <body>
 
         <div id="info"></div>
+        <div id="data"></div>
         <script language="JavaScript">
 
 let errorCount = 0;
 let lastImportedId = 0;
-let cards = {};
 
 const cmpId = 1345;
-const cmpDate = "2018-09-21";
+const cmpDate = "2018-09-22";
 const cmpZeroTime = "08:00:00";
+const maxDisplayCount = 50;
 
 function worker() {
-    function convertAttributes(attributeData) {
-        const data = {};
-
-        for (const a of attributeData) {
-            data[a.name] = a.nodeValue || "";
-        }
-        return data;
-    }
-
-    function convertChildren(childData) {
-        const data = {};
-
-        for (const c of childData) {
-            data[c.nodeName] = c.textContent || "";
-        }
-        return data;
-    }
 
     const xhr = new XMLHttpRequest();
     xhr.onload = function xhrSuccess() {
         const now = new Date().toLocaleTimeString();
-        let html = `<div class='success'>Senast uppdaterad ${now}</div><br>`;
+        window.infoElement.innerHTML = `<div class='success'>Senast uppdaterad ${now}</div><br>`;
 
-        for (const punch of xhr.responseXML.documentElement.children) {
-            const attr = convertAttributes(punch.attributes);
-            const child = convertChildren(punch.children);
+        for (const punch of xhr.response) {
 
-            html += "<div class='team'>";
-            html += `<p class='bib'>${child.bib || ""}</p>`;
+            if(punch.id > lastImportedId) {
+                lastImportedId = punch.id;
+            }
+
+            const card = parseInt(punch.card || "", 10);
+            if(card <= 0) continue;
+
+            const runner = window.cards[card];
+            if(typeof runner === "undefined") continue;
+
+            let html = "";
+            html += `<p class='bib'>${runner.bib || "&nbsp;"}</p>`;
             html += "<p class='desc'>";
-            html += `${child.runner || ""}<br>`;
-            html += `${child.team || child.club || ""}<br>`;
-            html += (child.class || "");
-            html += `<span style='float:right;'>${attr.time}</span></p>`;
-            html += "</div>";
+            html += `${runner.name || ""}<br>`;
+            html += `${runner.team || ""}<br>`;
+            html += (runner.className || "");
+            html += `<span style='float:right;'>${punch.time}</span></p>`;
+    
+            let newTeam = document.createElement('div');
+            newTeam.setAttribute('class', 'team');
+            newTeam.innerHTML = html;
+            dataElement.prepend(newTeam);
         }
 
-        document.getElementById("info").innerHTML = html;
+        // remove last div if we have too many
+        let count = dataElement.childNodes.length;
+        while(count > maxDisplayCount) {
+            dataElement.removeChild(dataElement.childNodes[maxDisplayCount]);
+            --count;
+        }
+
+        // run again in 2s
         setTimeout(worker, 2000);
     };
     xhr.onerror = function xhrError() {
         errorCount += 1;
-        document.getElementById("info").innerHTML = `<div class='error'>Får inga data från MeOS (${errorCount})</div>`;
+        window.infoElement.innerHTML = `<div class='error'>F&aring;r inga data fr&aring;n roc.olresultat.se (${errorCount})</div>`;
         setTimeout(worker, 2000);
     };
-    xhr.open("GET", `http://roc.olresultat.se/getpunches.asp?unitId=${cmpId}&lastId=${lastImportedId}&date=${cmpDate}&time=${cmpZeroTime}`);
-    xhr.responseType = "document";
+
+    const url = `${window.getpunchesUrl}/getpunches.php?unitId=${cmpId}&lastId=${lastImportedId}&date=${cmpDate}&time=${cmpZeroTime}`;
+    console.log(url);
+    xhr.open("GET", url);
+    xhr.responseType = "json";
     xhr.send();
 }
 
 function init() {
+
+    window.getpunchesUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+    window.infoElement = document.getElementById("info");
+    window.dataElement = document.getElementById("data");
+
     parseIof('startlista.xml')
       .then(runnerCards => {
          window.cards = runnerCards;
