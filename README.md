@@ -1,2 +1,2 @@
 # meos-prewarning
-Requires a custom version of MeOS.
+Now talks directly to roc.olresultat.se with data exported from MeOS
