@@ -48,6 +48,7 @@ const cmpId = 1345;
 const cmpDate = "2018-09-22";
 const cmpZeroTime = "08:00:00";
 const maxDisplayCount = 50;
+const limitControls = [133,151];
 
 function worker() {
 
@@ -64,6 +65,13 @@ function worker() {
 
             const card = parseInt(punch.card || "", 10);
             if(card <= 0) continue;
+
+            if(limitControls !== false) {
+                const control = parseInt(punch.control || "", 10);
+                if(!limitControls.includes(control)) {
+                    continue;
+                }
+            }
 
             const runner = window.cards[card];
             if(typeof runner === "undefined") continue;
